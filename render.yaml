@@ -1,0 +1,235 @@
+databases:
+  - name: fitness-world-db
+    databaseName: fitness_world
+    plan: basic-256mb
+    postgresMajorVersion: "17"
+    region: singapore
+
+services:
+  - name: fitness-world-discovery
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl discovery-service -am package
+    startCommand: cd backend && java -jar discovery-service/target/discovery-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8761"
+
+  - name: fitness-world-ai
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl ai-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && java -jar ai-service/target/ai-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8087"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: AI_MODEL
+        value: llama-3.3-70b-versatile
+
+  - name: fitness-world-notifications
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl notification-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && java -jar notification-service/target/notification-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8086"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+
+  - name: fitness-world-auth
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl auth-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && export SPRING_DATASOURCE_URL="jdbc:${DATABASE_URL}" && java -jar auth-service/target/auth-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8081"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitness-world-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: fitness-world-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: fitness-world-db
+          property: password
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: fitness-world-api
+          envVarKey: JWT_SECRET
+
+  - name: fitness-world-profile
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl profile-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && export SPRING_DATASOURCE_URL="jdbc:${DATABASE_URL}" && java -jar profile-service/target/profile-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8082"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitness-world-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: fitness-world-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: fitness-world-db
+          property: password
+
+  - name: fitness-world-planning
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl planning-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && export AI_SERVICE_URL="http://${AI_SERVICE_HOSTPORT}" && export SPRING_DATASOURCE_URL="jdbc:${DATABASE_URL}" && java -jar planning-service/target/planning-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8083"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: AI_SERVICE_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-ai
+          property: hostport
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitness-world-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: fitness-world-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: fitness-world-db
+          property: password
+
+  - name: fitness-world-progress
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl progress-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && export SPRING_DATASOURCE_URL="jdbc:${DATABASE_URL}" && java -jar progress-service/target/progress-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8084"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitness-world-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: fitness-world-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: fitness-world-db
+          property: password
+
+  - name: fitness-world-billing
+    type: pserv
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl billing-service -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && export SPRING_DATASOURCE_URL="jdbc:${DATABASE_URL}" && java -jar billing-service/target/billing-service-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8085"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitness-world-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: fitness-world-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: fitness-world-db
+          property: password
+
+  - name: fitness-world-api
+    type: web
+    runtime: java
+    plan: starter
+    region: singapore
+    buildCommand: cd backend && mvn -q -DskipTests -pl api-gateway -am package
+    startCommand: cd backend && export EUREKA_SERVER_URL="http://${DISCOVERY_HOSTPORT}/eureka" && java -jar api-gateway/target/api-gateway-1.0.0.jar
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: DISCOVERY_HOSTPORT
+        fromService:
+          type: pserv
+          name: fitness-world-discovery
+          property: hostport
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false

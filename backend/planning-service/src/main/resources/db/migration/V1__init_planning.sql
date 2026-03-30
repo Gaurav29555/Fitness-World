@@ -1,0 +1,12 @@
+CREATE SCHEMA IF NOT EXISTS planning;
+CREATE TABLE IF NOT EXISTS planning.plan_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    member_id BIGINT NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    version_no INTEGER NOT NULL,
+    language VARCHAR(16) NOT NULL,
+    region VARCHAR(64) NOT NULL,
+    goal VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);

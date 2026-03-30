@@ -1,0 +1,83 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+                allowedMethods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+                allowedHeaders: '*'
+                allowCredentials: true
+          routes:
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/**
+            - id: profile-service
+              uri: lb://profile-service
+              predicates:
+                - Path=/api/profiles/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: profileServiceCb
+                    fallbackUri: forward:/fallback/profile
+            - id: planning-service
+              uri: lb://planning-service
+              predicates:
+                - Path=/api/plans/**
+            - id: progress-service
+              uri: lb://progress-service
+              predicates:
+                - Path=/api/progress/**
+            - id: billing-service
+              uri: lb://billing-service
+              predicates:
+                - Path=/api/billing/**
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/notifications/**
+            - id: ai-service
+              uri: lb://ai-service
+              predicates:
+                - Path=/api/ai/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka}
+
+security:
+  jwt:
+    issuer: fitness-world
+    secret: ${JWT_SECRET:fitness-world-jwt-secret-should-be-32-bytes-minimum}
+    access-token-minutes: 480
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      profileServiceCb:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
