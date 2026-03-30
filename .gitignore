@@ -8,3 +8,7 @@ backend/**/target/
 
 run-logs/
 run-scripts/
+
+backend/.m2repo/
+frontend/test-results/
+frontend/playwright-report/
